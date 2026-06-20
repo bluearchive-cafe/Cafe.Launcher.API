@@ -20,6 +20,7 @@ interface GitHubRelease {
 }
 
 interface ReleaseFile {
+  name: string;
   url: string;
   sha512: string;
   size: number;
@@ -27,26 +28,25 @@ interface ReleaseFile {
 
 interface LauncherRelease {
   version: string;
-  files: ReleaseFile[];
-  path: string;
-  sha512: string;
   releaseDate: string;
+  files: ReleaseFile[];
 }
 
 // ── OpenAPI response schemas ──────────────────────────────────────────
 
 const ReleaseFileSchema = z.object({
+  name: z.string().openapi({
+    example: "Cafe.Launcher.Avalonia_v1.0.0-beta.1.zip",
+  }),
   url: z.string().openapi({ example: "https://github.com/..." }),
   sha512: z.string().openapi({ example: "" }),
-  size: z.number().openapi({ example: 12345678 }),
+  size: z.number().openapi({ example: 79918145 }),
 });
 
 const LauncherReleaseSchema = z.object({
-  version: z.string().openapi({ example: "1.0.0" }),
+  version: z.string().openapi({ example: "1.0.0-beta.1" }),
+  releaseDate: z.string().openapi({ example: "2026-06-19T06:18:31Z" }),
   files: ReleaseFileSchema.array(),
-  path: z.string().openapi({ example: "Cafe-Launcher-Setup.exe" }),
-  sha512: z.string(),
-  releaseDate: z.string().openapi({ example: "2025-01-15T12:00:00Z" }),
 });
 
 // ── Route handler ─────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export class LauncherReleases extends OpenAPIRoute {
 
   async handle(c: AppContext): Promise<Response> {
     try {
-      const cache = await caches.open("github-releases");
+      const cache = await caches.open("github-releases-v2");
       const cached = await cache.match(c.req.raw);
       if (cached) return cached;
 
@@ -116,6 +116,7 @@ function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
   return githubReleases.map((release) => {
     const assets = release.assets ?? [];
     const files: ReleaseFile[] = assets.map((asset) => ({
+      name: asset.name,
       url: asset.browser_download_url,
       sha512: "",
       size: asset.size,
@@ -123,10 +124,8 @@ function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
 
     return {
       version: release.tag_name.replace(/^v/, ""),
-      files,
-      path: assets[0]?.name ?? "",
-      sha512: "",
       releaseDate: release.published_at,
+      files,
     };
   });
 }
