@@ -6,7 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "api-cafe-launcher",
 	"main": "src/index.ts",
-	"compatibility_date": "2026-06-20",
+	"compatibility_date": "2026-06-19",
 	"observability": {
 		"enabled": true
 	},
