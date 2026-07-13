@@ -22,7 +22,6 @@ interface GitHubRelease {
 interface ReleaseFile {
   name: string;
   url: string;
-  sha512: string;
   size: number;
 }
 
@@ -39,7 +38,6 @@ const ReleaseFileSchema = z.object({
     example: "Cafe.Launcher.Avalonia_v1.0.0-beta.1.zip",
   }),
   url: z.string().openapi({ example: "https://github.com/..." }),
-  sha512: z.string().openapi({ example: "" }),
   size: z.number().openapi({ example: 79918145 }),
 });
 
@@ -118,7 +116,6 @@ function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
     const files: ReleaseFile[] = assets.map((asset) => ({
       name: asset.name,
       url: asset.browser_download_url,
-      sha512: "",
       size: asset.size,
     }));
 
