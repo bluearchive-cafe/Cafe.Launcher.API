@@ -1,25 +1,40 @@
-# Cloudflare Workers OpenAPI 3.1
+# Cafe Launcher API
 
-This is a Cloudflare Worker with OpenAPI 3.1 using [chanfana](https://github.com/cloudflare/chanfana) and [Hono](https://github.com/honojs/hono).
+Cafe Launcher 的 Cloudflare Worker API。目前提供 GitHub Releases 代理，供桌面启动器检查自身更新。
 
-This is an example project made to be used as a quick start into building OpenAPI compliant Workers that generates the
-`openapi.json` schema automatically from code and validates the incoming request to the defined parameters or request body.
+## 接口
 
-## Get started
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/launcher/releases` | 返回 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 的全部发布版本与下载文件 |
+| `GET` | `/` | OpenAPI 文档 |
 
-1. Sign up for [Cloudflare Workers](https://workers.dev). The free tier is more than enough for most use cases.
-2. Clone this project and install dependencies with `npm install`
-3. Run `wrangler login` to login to your Cloudflare account in wrangler
-4. Run `wrangler deploy` to publish the API to Cloudflare Workers
+发布列表在 Cloudflare Cache API 中缓存 5 分钟。查询字符串不会产生独立缓存项。
 
-## Project structure
+## 本地开发
 
-1. Your main router is defined in `src/index.ts`.
-2. Each endpoint has its own file in `src/endpoints/`.
-3. For more information read the [chanfana documentation](https://chanfana.pages.dev/) and [Hono documentation](https://hono.dev/docs).
+需要 Node.js 22。复制 `.dev.vars.example` 为 `.dev.vars`，并为 `GITHUB_TOKEN` 填入可读取发布仓库的 GitHub Token。
 
-## Development
+```powershell
+npm ci
+npm run typecheck
+npm test
+npm run dev
+```
 
-1. Run `wrangler dev` to start a local instance of the API.
-2. Open `http://localhost:8787/` in your browser to see the Swagger interface where you can try the endpoints.
-3. Changes made in the `src/` folder will automatically trigger the server to reload, you only need to refresh the Swagger interface.
+修改 Wrangler 绑定后运行 `npm run cf-typegen`，同步更新 `worker-configuration.d.ts`。
+
+## 部署
+
+推送或提交针对 `main` 的 Pull Request 时，GitHub Actions 会运行类型检查和 Workers 集成测试。推送到 `main` 且验证通过后，工作流执行 `npm run deploy`。
+
+部署工作流需要配置以下 GitHub Actions 仓库 Secret：
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+生产环境的 `GITHUB_TOKEN` 使用 `wrangler secret put GITHUB_TOKEN` 配置，不写入仓库。
+
+## 源代码
+
+本服务为闭源内部项目，源代码不向公众发布。

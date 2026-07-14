@@ -1,12 +1,14 @@
 {
-  "name": "cloudflare-workers-openapi",
+  "name": "api-cafe-launcher",
   "version": "0.0.1",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "chanfana": "^3.3.0",
@@ -14,8 +16,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
     "@types/node": "^25.9.4",
     "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
     "wrangler": "^4.103.0"
   }
 }
