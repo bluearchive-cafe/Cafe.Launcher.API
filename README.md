@@ -11,6 +11,8 @@ Cafe Launcher 的 Cloudflare Worker API。目前提供 GitHub Releases 代理，
 
 发布列表在 Cloudflare Cache API 中缓存 5 分钟。查询字符串不会产生独立缓存项。
 
+生产域名：`api-cafe-launcher.saibamidori.com`
+
 ## 本地开发
 
 需要 Node.js 22。复制 `.dev.vars.example` 为 `.dev.vars`，并为 `GITHUB_TOKEN` 填入可读取发布仓库的 GitHub Token。
