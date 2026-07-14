@@ -3,9 +3,10 @@ import { z } from "zod";
 import type { AppContext } from "../types";
 
 const GITHUB_API_URL =
-  "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases?per_page=20";
+  "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases";
 
 const CACHE_MAX_AGE = 300;
+const GITHUB_RELEASES_PER_PAGE = 100;
 
 interface GitHubAsset {
   browser_download_url: string;
@@ -68,7 +69,8 @@ export class LauncherReleases extends OpenAPIRoute {
   async handle(c: AppContext): Promise<Response> {
     try {
       const cache = await caches.open("github-releases-v2");
-      const cached = await cache.match(c.req.raw);
+      const cacheKey = createCacheKey(c.req.raw);
+      const cached = await cache.match(cacheKey);
       if (cached) return cached;
 
       const githubReleases = await fetchFromGitHub(c.env.GITHUB_TOKEN);
@@ -81,7 +83,7 @@ export class LauncherReleases extends OpenAPIRoute {
       );
       response.headers.set("Access-Control-Allow-Origin", "*");
 
-      c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+      c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
 
       return response;
     } catch (err) {
@@ -93,21 +95,41 @@ export class LauncherReleases extends OpenAPIRoute {
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
+function createCacheKey(request: Request): Request {
+  const url = new URL(request.url);
+  url.search = "";
+  url.hash = "";
+  return new Request(url.toString(), { method: "GET" });
+}
+
 async function fetchFromGitHub(token: string): Promise<GitHubRelease[]> {
-  const res = await fetch(GITHUB_API_URL, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      "User-Agent": "Cafe-Launcher-Worker/1.0",
-      "X-GitHub-Api-Version": "2022-11-28",
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const releases: GitHubRelease[] = [];
+  let page = 1;
+  let pageReleases: GitHubRelease[];
 
-  if (!res.ok) {
-    throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
-  }
+  do {
+    const url = new URL(GITHUB_API_URL);
+    url.searchParams.set("per_page", GITHUB_RELEASES_PER_PAGE.toString());
+    url.searchParams.set("page", page.toString());
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "Cafe-Launcher-Worker/1.0",
+        "X-GitHub-Api-Version": "2022-11-28",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  return res.json() as Promise<GitHubRelease[]>;
+    if (!response.ok) {
+      throw new Error(`GitHub API ${response.status}: ${await response.text()}`);
+    }
+
+    pageReleases = await response.json<GitHubRelease[]>();
+    releases.push(...pageReleases);
+    page++;
+  } while (pageReleases.length === GITHUB_RELEASES_PER_PAGE);
+
+  return releases;
 }
 
 function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
