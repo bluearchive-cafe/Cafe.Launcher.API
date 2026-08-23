@@ -13,7 +13,18 @@
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
-	]
+	],
+	"routes": [
+		{
+			"pattern": "api-cafe-launcher.saibamidori.com",
+			"custom_domain": true
+		}
+	],
+	"secrets": {
+		"required": [
+			"GITHUB_TOKEN"
+		]
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
