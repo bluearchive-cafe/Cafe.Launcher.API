@@ -73,7 +73,7 @@ export class LauncherReleases extends OpenAPIRoute {
 
   async handle(c: AppContext): Promise<Response> {
     try {
-      const cache = await caches.open("github-releases-v2");
+      const cache = await caches.open("github-releases-v3");
       const cacheKey = createCacheKey(c.req.raw);
       const cached = await cache.match(cacheKey);
       if (cached) return cached;
