@@ -12,6 +12,7 @@ interface GitHubAsset {
   browser_download_url: string;
   size: number;
   name: string;
+  digest: string | null;
 }
 
 interface GitHubRelease {
@@ -24,6 +25,7 @@ interface ReleaseFile {
   name: string;
   url: string;
   size: number;
+  checksum: string | null;
 }
 
 interface LauncherRelease {
@@ -40,6 +42,9 @@ const ReleaseFileSchema = z.object({
   }),
   url: z.string().openapi({ example: "https://github.com/..." }),
   size: z.number().openapi({ example: 79918145 }),
+  checksum: z.string().nullable().openapi({
+    example: "sha256:24741899cf32870644c73d6f3e20a7d26c8f6325ad1e7d3fea0a79d26c293988",
+  }),
 });
 
 const LauncherReleaseSchema = z.object({
@@ -139,6 +144,7 @@ function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
       name: asset.name,
       url: asset.browser_download_url,
       size: asset.size,
+      checksum: asset.digest ?? null,
     }));
 
     return {
