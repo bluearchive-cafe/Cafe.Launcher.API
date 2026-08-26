@@ -7,9 +7,10 @@ Cafe Launcher 的 Cloudflare Worker API。目前提供 GitHub Releases 代理，
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/api/launcher/releases` | 返回 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 的全部发布版本、下载文件与 SHA-256 校验值 |
+| `GET` | `/api/launcher/operations/resource` | 将 Blue Archive 公告索引转换为启动器兼容的公告与 Banner 响应 |
 | `GET` | `/` | OpenAPI 文档 |
 
-发布列表在 Cloudflare Cache API 中缓存 5 分钟。查询字符串不会产生独立缓存项。
+发布列表和公告资源在 Cloudflare Cache API 中缓存 5 分钟。查询字符串不会产生独立缓存项。
 
 生产域名：`api-cafe-launcher.saibamidori.com`
 
