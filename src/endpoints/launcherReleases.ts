@@ -38,18 +38,21 @@ interface LauncherRelease {
 
 const ReleaseFileSchema = z.object({
   name: z.string().openapi({
-    example: "Cafe.Launcher.Avalonia_v1.0.0-beta.1.zip",
+    example: "Cafe.Launcher.Avalonia_v1.1.0-beta.1_win-x64.zip",
   }),
-  url: z.string().openapi({ example: "https://github.com/..." }),
-  size: z.number().openapi({ example: 79918145 }),
+  url: z.string().openapi({
+    example:
+      "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.1.0-beta.1/Cafe.Launcher.Avalonia_v1.1.0-beta.1_win-x64.zip",
+  }),
+  size: z.number().openapi({ example: 79796626 }),
   checksum: z.string().nullable().openapi({
-    example: "sha256:24741899cf32870644c73d6f3e20a7d26c8f6325ad1e7d3fea0a79d26c293988",
+    example: "sha256:630916b5e2717bb78bad7b219c2abc7665733e00cabab759a69d59b08901d8a0",
   }),
 });
 
 const LauncherReleaseSchema = z.object({
-  version: z.string().openapi({ example: "1.0.0-beta.1" }),
-  releaseDate: z.string().openapi({ example: "2026-06-19T06:18:31Z" }),
+  version: z.string().openapi({ example: "1.1.0-beta.1" }),
+  releaseDate: z.string().openapi({ example: "2026-08-28T10:44:41Z" }),
   files: ReleaseFileSchema.array(),
 });
 
