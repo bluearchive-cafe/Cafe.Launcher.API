@@ -40,4 +40,4 @@ npm run dev
 
 ## 源代码
 
-本服务为闭源内部项目，源代码不向公众发布。
+本服务源代码已公开，并采用 [MIT License](./LICENSE)。桌面启动器源码位于 [bluearchive-cafe/Cafe.Launcher.Avalonia](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)。
