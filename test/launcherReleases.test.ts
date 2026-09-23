@@ -87,6 +87,67 @@ describe("GET /api/launcher/releases", () => {
   });
 });
 
+describe("GET /api/v2/launcher/releases", () => {
+  it("reads releases from the application repository", async () => {
+    const upstreamFetch = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(Response.json([])),
+    );
+
+    const response = await requestReleases(
+      "https://v2-source-test.invalid/api/v2/launcher/releases",
+    );
+
+    expect(response.status).toBe(200);
+    const upstreamUrl = new URL(String(upstreamFetch.mock.calls[0]?.[0]));
+    expect(upstreamUrl.origin + upstreamUrl.pathname).toBe(
+      "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
+    );
+  });
+
+  it("excludes drafts and assets that are not uploaded", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(Response.json([
+        {
+          tag_name: "v2.0.0",
+          draft: true,
+          published_at: "2026-09-23T00:00:00Z",
+          assets: [],
+        },
+        {
+          tag_name: "v1.2.0",
+          draft: false,
+          published_at: "2026-09-22T00:00:00Z",
+          assets: [
+            {
+              name: "ready.zip",
+              browser_download_url: "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/ready.zip",
+              size: 123,
+              digest: "sha256:abc123",
+              state: "uploaded",
+            },
+            {
+              name: "pending.zip",
+              browser_download_url: "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/pending.zip",
+              size: 456,
+              digest: null,
+              state: "new",
+            },
+          ],
+        },
+      ])),
+    );
+
+    const response = await requestReleases(
+      "https://v2-filter-test.invalid/api/v2/launcher/releases",
+    );
+    const releases = await response.json<Array<{ version: string; files: Array<{ name: string }> }>>();
+
+    expect(releases).toHaveLength(1);
+    expect(releases[0]?.version).toBe("1.2.0");
+    expect(releases[0]?.files.map((file) => file.name)).toEqual(["ready.zip"]);
+  });
+});
+
 async function requestReleases(url: string): Promise<Response> {
   const request = new IncomingRequest(url);
   const ctx = createExecutionContext();
