@@ -1,7 +1,7 @@
 import { fromHono } from "chanfana";
 import { Hono } from "hono";
 import { LauncherOperationsResource } from "./endpoints/launcherOperationsResource";
-import { LauncherReleases } from "./endpoints/launcherReleases";
+import { LauncherReleases, LauncherReleasesV2 } from "./endpoints/launcherReleases";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -13,6 +13,7 @@ const openapi = fromHono(app, {
 
 // Launcher release proxy — fetches GitHub releases with PAT, cached at edge
 openapi.get("/api/launcher/releases", LauncherReleases);
+openapi.get("/api/v2/launcher/releases", LauncherReleasesV2);
 openapi.get("/api/launcher/operations/resource", LauncherOperationsResource);
 
 // Export the Hono app

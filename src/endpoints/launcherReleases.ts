@@ -2,8 +2,10 @@ import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import type { AppContext } from "../types";
 
-const GITHUB_API_URL =
+const LEGACY_GITHUB_API_URL =
   "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases";
+const CURRENT_GITHUB_API_URL =
+  "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia/releases";
 
 const CACHE_MAX_AGE = 300;
 const GITHUB_RELEASES_PER_PAGE = 100;
@@ -13,11 +15,13 @@ interface GitHubAsset {
   size: number;
   name: string;
   digest: string | null;
+  state?: string;
 }
 
 interface GitHubRelease {
   tag_name: string;
   published_at: string;
+  draft?: boolean;
   assets: GitHubAsset[];
 }
 
@@ -75,29 +79,45 @@ export class LauncherReleases extends OpenAPIRoute {
   };
 
   async handle(c: AppContext): Promise<Response> {
-    try {
-      const cache = await caches.open("github-releases-v3");
-      const cacheKey = createCacheKey(c.req.raw);
-      const cached = await cache.match(cacheKey);
-      if (cached) return cached;
+    return handleReleases(c, LEGACY_GITHUB_API_URL, "github-releases-v3", false);
+  }
+}
 
-      const githubReleases = await fetchFromGitHub(c.env.GITHUB_TOKEN);
-      const releases = transformReleases(githubReleases);
+/** Versioned release feed backed by the application repository. */
+export class LauncherReleasesV2 extends LauncherReleases {
+  override async handle(c: AppContext): Promise<Response> {
+    return handleReleases(c, CURRENT_GITHUB_API_URL, "github-releases-v4-main", true);
+  }
+}
 
-      const response = c.json(releases);
-      response.headers.set(
-        "Cache-Control",
-        `public, max-age=${CACHE_MAX_AGE}`,
-      );
-      response.headers.set("Access-Control-Allow-Origin", "*");
+async function handleReleases(
+  c: AppContext,
+  githubApiUrl: string,
+  cacheName: string,
+  filterIncomplete: boolean,
+): Promise<Response> {
+  try {
+    const cache = await caches.open(cacheName);
+    const cacheKey = createCacheKey(c.req.raw);
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
 
-      c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+    const githubReleases = await fetchFromGitHub(c.env.GITHUB_TOKEN, githubApiUrl);
+    const releases = transformReleases(githubReleases, filterIncomplete);
 
-      return response;
-    } catch (err) {
-      console.error("release proxy error:", err);
-      return c.json({ error: "Failed to fetch releases" }, 502);
-    }
+    const response = c.json(releases);
+    response.headers.set(
+      "Cache-Control",
+      `public, max-age=${CACHE_MAX_AGE}`,
+    );
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+
+    return response;
+  } catch (err) {
+    console.error("release proxy error:", err);
+    return c.json({ error: "Failed to fetch releases" }, 502);
   }
 }
 
@@ -110,13 +130,13 @@ function createCacheKey(request: Request): Request {
   return new Request(url.toString(), { method: "GET" });
 }
 
-async function fetchFromGitHub(token: string): Promise<GitHubRelease[]> {
+async function fetchFromGitHub(token: string, githubApiUrl: string): Promise<GitHubRelease[]> {
   const releases: GitHubRelease[] = [];
   let page = 1;
   let pageReleases: GitHubRelease[];
 
   do {
-    const url = new URL(GITHUB_API_URL);
+    const url = new URL(githubApiUrl);
     url.searchParams.set("per_page", GITHUB_RELEASES_PER_PAGE.toString());
     url.searchParams.set("page", page.toString());
     const response = await fetch(url, {
@@ -140,20 +160,26 @@ async function fetchFromGitHub(token: string): Promise<GitHubRelease[]> {
   return releases;
 }
 
-function transformReleases(githubReleases: GitHubRelease[]): LauncherRelease[] {
-  return githubReleases.map((release) => {
-    const assets = release.assets ?? [];
-    const files: ReleaseFile[] = assets.map((asset) => ({
-      name: asset.name,
-      url: asset.browser_download_url,
-      size: asset.size,
-      checksum: asset.digest ?? null,
-    }));
+function transformReleases(
+  githubReleases: GitHubRelease[],
+  filterIncomplete: boolean,
+): LauncherRelease[] {
+  return githubReleases
+    .filter((release) => !filterIncomplete || !release.draft)
+    .map((release) => {
+      const assets = (release.assets ?? [])
+        .filter((asset) => !filterIncomplete || asset.state === "uploaded");
+      const files: ReleaseFile[] = assets.map((asset) => ({
+        name: asset.name,
+        url: asset.browser_download_url,
+        size: asset.size,
+        checksum: asset.digest ?? null,
+      }));
 
-    return {
-      version: release.tag_name.replace(/^v/, ""),
-      releaseDate: release.published_at,
-      files,
-    };
-  });
+      return {
+        version: release.tag_name.replace(/^v/, ""),
+        releaseDate: release.published_at,
+        files,
+      };
+    });
 }
