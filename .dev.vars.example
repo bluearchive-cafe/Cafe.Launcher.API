@@ -1,6 +1,6 @@
 # Copy this file to .dev.vars and fill in real values
 # .dev.vars is gitignored and will NOT be committed
 
-# GitHub Personal Access Token — used by /api/launcher/releases
+# GitHub Personal Access Token — used by /api/launcher/releases and /api/v2/launcher/releases
 # Create at: https://github.com/settings/tokens (no scopes needed for public repos)
 GITHUB_TOKEN=ghp_your_token_here
