@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "api-cafe-launcher",
+	"name": "cafe-launcher-api",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-06-19",
 	"observability": {
@@ -16,6 +16,11 @@
 	],
 	"routes": [
 		{
+			"pattern": "api.cafe-launcher.saibamidori.com",
+			"custom_domain": true
+		},
+		{
+			// 旧域名保留给尚未升级到新基址的已发布客户端。
 			"pattern": "api-cafe-launcher.saibamidori.com",
 			"custom_domain": true
 		}
@@ -24,6 +29,9 @@
 		"required": [
 			"GITHUB_TOKEN"
 		]
+	},
+	"vars": {
+		"DOWNLOAD_MIRROR_BASE_URL": "https://download.cafe-launcher.saibamidori.com"
 	}
 	/**
 	 * Smart Placement

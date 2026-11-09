@@ -37,6 +37,30 @@ describe("GET /api/launcher/releases", () => {
     expect(releases[0]?.files[0]?.checksum).toBe("sha256:abc123");
   });
 
+  it("does not add mirror URLs to the legacy feed", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(Response.json([
+        {
+          tag_name: "v1.0.0",
+          published_at: "2026-07-14T00:00:00Z",
+          assets: [{
+            name: "legacy.exe",
+            browser_download_url: "https://github.com/example/legacy.exe",
+            size: 123,
+            digest: null,
+          }],
+        },
+      ])),
+    );
+
+    const response = await requestReleases(
+      "https://legacy-mirror-test.invalid/api/launcher/releases",
+    );
+    const releases = await response.json<Array<{ files: Array<{ mirrorUrl?: string }> }>>();
+
+    expect(releases[0]?.files[0]).not.toHaveProperty("mirrorUrl");
+  });
+
   it("shares one cached response across query strings", async () => {
     const upstreamFetch = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(Response.json([
@@ -101,6 +125,33 @@ describe("GET /api/v2/launcher/releases", () => {
     const upstreamUrl = new URL(String(upstreamFetch.mock.calls[0]?.[0]));
     expect(upstreamUrl.origin + upstreamUrl.pathname).toBe(
       "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
+    );
+  });
+
+  it("adds a mirror URL to every uploaded asset", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(Response.json([
+        {
+          tag_name: "v1.2.0",
+          published_at: "2026-09-22T00:00:00Z",
+          assets: [{
+            name: "Cafe.Launcher_v1.2.0_setup.exe",
+            browser_download_url: "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_v1.2.0_setup.exe",
+            size: 123,
+            digest: "sha256:abc123",
+            state: "uploaded",
+          }],
+        },
+      ])),
+    );
+
+    const response = await requestReleases(
+      "https://v2-mirror-test.invalid/api/v2/launcher/releases",
+    );
+    const releases = await response.json<Array<{ version: string; files: Array<{ mirrorUrl?: string }> }>>();
+
+    expect(releases[0]?.files[0]?.mirrorUrl).toBe(
+      "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.2.0/Cafe.Launcher_v1.2.0_setup.exe",
     );
   });
 

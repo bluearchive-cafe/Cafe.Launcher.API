@@ -22,7 +22,7 @@ Cloudflare Worker（Hono + chanfana，运行在 workerd 上）为 Cafe Launcher 
 
 ## 部署
 
-`.github/workflows/deploy.yml` 在 Pull Request 和推送到 `main` 时执行类型检查与测试，随后在推送到 `main` 或 `workflow_dispatch` 时部署。需要仓库 Secret：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。生产域名 `api-cafe-launcher.saibamidori.com` 由 `wrangler.jsonc` 的 custom domain 路由绑定。
+`.github/workflows/deploy.yml` 在 Pull Request 和推送到 `main` 时执行类型检查与测试，随后在推送到 `main` 或 `workflow_dispatch` 时部署。需要仓库 Secret：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。生产域名 `api.cafe-launcher.saibamidori.com` 及兼容旧域名 `api-cafe-launcher.saibamidori.com` 由 `wrangler.jsonc` 的 custom domain 路由绑定。
 
 # Cloudflare Workers
 

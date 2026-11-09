@@ -30,6 +30,7 @@ interface ReleaseFile {
   url: string;
   size: number;
   checksum: string | null;
+  mirrorUrl?: string;
 }
 
 interface LauncherRelease {
@@ -51,6 +52,12 @@ const ReleaseFileSchema = z.object({
   size: z.number().openapi({ example: 79796626 }),
   checksum: z.string().nullable().openapi({
     example: "sha256:630916b5e2717bb78bad7b219c2abc7665733e00cabab759a69d59b08901d8a0",
+  }),
+  mirrorUrl: z.string().nullable().optional().openapi({
+    example:
+      "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.3.1/Cafe.Launcher_v1.3.1_setup.exe",
+    description:
+      "Mirror download URL; only returned by the v2 endpoint. Clients must fall back to url.",
   }),
 });
 
@@ -86,7 +93,13 @@ export class LauncherReleases extends OpenAPIRoute {
 /** Versioned release feed backed by the application repository. */
 export class LauncherReleasesV2 extends LauncherReleases {
   override async handle(c: AppContext): Promise<Response> {
-    return handleReleases(c, CURRENT_GITHUB_API_URL, "github-releases-v4-main", true);
+    return handleReleases(
+      c,
+      CURRENT_GITHUB_API_URL,
+      "github-releases-v5-main",
+      true,
+      c.env.DOWNLOAD_MIRROR_BASE_URL,
+    );
   }
 }
 
@@ -95,6 +108,7 @@ async function handleReleases(
   githubApiUrl: string,
   cacheName: string,
   filterIncomplete: boolean,
+  mirrorBaseUrl?: string,
 ): Promise<Response> {
   try {
     const cache = await caches.open(cacheName);
@@ -103,7 +117,7 @@ async function handleReleases(
     if (cached) return cached;
 
     const githubReleases = await fetchFromGitHub(c.env.GITHUB_TOKEN, githubApiUrl);
-    const releases = transformReleases(githubReleases, filterIncomplete);
+    const releases = transformReleases(githubReleases, filterIncomplete, mirrorBaseUrl);
 
     const response = c.json(releases);
     response.headers.set(
@@ -163,21 +177,31 @@ async function fetchFromGitHub(token: string, githubApiUrl: string): Promise<Git
 function transformReleases(
   githubReleases: GitHubRelease[],
   filterIncomplete: boolean,
+  mirrorBaseUrl?: string,
 ): LauncherRelease[] {
+  const mirrorBase = mirrorBaseUrl?.replace(/\/+$/, "");
   return githubReleases
     .filter((release) => !filterIncomplete || !release.draft)
     .map((release) => {
+      const version = release.tag_name.replace(/^v/, "");
       const assets = (release.assets ?? [])
         .filter((asset) => !filterIncomplete || asset.state === "uploaded");
-      const files: ReleaseFile[] = assets.map((asset) => ({
-        name: asset.name,
-        url: asset.browser_download_url,
-        size: asset.size,
-        checksum: asset.digest ?? null,
-      }));
+      const files: ReleaseFile[] = assets.map((asset) => {
+        const file: ReleaseFile = {
+          name: asset.name,
+          url: asset.browser_download_url,
+          size: asset.size,
+          checksum: asset.digest ?? null,
+        };
+        if (mirrorBase) {
+          file.mirrorUrl =
+            `${mirrorBase}/v1/downloads/v${version}/${encodeURIComponent(asset.name)}`;
+        }
+        return file;
+      });
 
       return {
-        version: release.tag_name.replace(/^v/, ""),
+        version,
         releaseDate: release.published_at,
         files,
       };
