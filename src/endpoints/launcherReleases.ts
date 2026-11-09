@@ -22,6 +22,7 @@ interface GitHubRelease {
   tag_name: string;
   published_at: string;
   draft?: boolean;
+  body?: string | null;
   assets: GitHubAsset[];
 }
 
@@ -67,6 +68,17 @@ const LauncherReleaseSchema = z.object({
   files: ReleaseFileSchema.array(),
 });
 
+const ReleaseNotesSchema = z.object({
+  version: z.string().openapi({ example: "1.3.1" }),
+  releaseNotes: z.string().openapi({ example: "## Highlights\n\n- Faster updates" }),
+});
+
+// Mirrors the client's SemVer grammar; rejects characters that could rewrite the upstream URL.
+const VersionParamSchema = z
+  .string()
+  .regex(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/)
+  .openapi({ example: "1.3.1", description: "Bare release version, without the leading v" });
+
 // ── Route handler ─────────────────────────────────────────────────────
 
 export class LauncherReleases extends OpenAPIRoute {
@@ -100,6 +112,64 @@ export class LauncherReleasesV2 extends LauncherReleases {
       true,
       c.env.DOWNLOAD_MIRROR_BASE_URL,
     );
+  }
+}
+
+/** One published release's notes by bare version, so clients avoid unauthenticated GitHub calls. */
+export class LauncherReleaseNotes extends OpenAPIRoute {
+  schema = {
+    tags: ["Launcher"],
+    summary: "Get one Cafe Launcher release's notes by version (edge-cached 5 min)",
+    request: {
+      params: z.object({
+        version: VersionParamSchema,
+      }),
+    },
+    responses: {
+      "200": {
+        description: "Release notes markdown",
+        content: {
+          "application/json": {
+            schema: ReleaseNotesSchema,
+          },
+        },
+      },
+      "400": { description: "Invalid version" },
+      "404": { description: "No published release for this version" },
+      "502": { description: "GitHub upstream failure" },
+    },
+  };
+
+  async handle(c: AppContext): Promise<Response> {
+    const { params } = await this.getValidatedData<typeof this.schema>();
+    const version = params.version;
+    try {
+      const cache = await caches.open("github-release-notes-v1");
+      const cacheKey = createCacheKey(c.req.raw);
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+
+      const response = await fetch(
+        `${CURRENT_GITHUB_API_URL}/tags/v${encodeURIComponent(version)}`,
+        { headers: githubApiHeaders(c.env.GITHUB_TOKEN) },
+      );
+      if (response.status === 404) return c.json({ error: "Release not found" }, 404);
+      if (!response.ok) {
+        throw new Error(`GitHub API ${response.status}: ${await response.text()}`);
+      }
+      const release = await response.json<GitHubRelease>();
+      // The PAT can read drafts; the public endpoint must not leak unpublished notes.
+      if (release.draft) return c.json({ error: "Release not found" }, 404);
+
+      const result = c.json({ version, releaseNotes: release.body ?? "" });
+      result.headers.set("Cache-Control", `public, max-age=${CACHE_MAX_AGE}`);
+      result.headers.set("Access-Control-Allow-Origin", "*");
+      c.executionCtx.waitUntil(cache.put(cacheKey, result.clone()));
+      return result;
+    } catch (err) {
+      console.error("release notes proxy error:", err);
+      return c.json({ error: "Failed to fetch release notes" }, 502);
+    }
   }
 }
 
@@ -144,6 +214,15 @@ function createCacheKey(request: Request): Request {
   return new Request(url.toString(), { method: "GET" });
 }
 
+function githubApiHeaders(token: string): HeadersInit {
+  return {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "Cafe-Launcher-Worker/1.0",
+    "X-GitHub-Api-Version": "2022-11-28",
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 async function fetchFromGitHub(token: string, githubApiUrl: string): Promise<GitHubRelease[]> {
   const releases: GitHubRelease[] = [];
   let page = 1;
@@ -154,12 +233,7 @@ async function fetchFromGitHub(token: string, githubApiUrl: string): Promise<Git
     url.searchParams.set("per_page", GITHUB_RELEASES_PER_PAGE.toString());
     url.searchParams.set("page", page.toString());
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "Cafe-Launcher-Worker/1.0",
-        "X-GitHub-Api-Version": "2022-11-28",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: githubApiHeaders(token),
     });
 
     if (!response.ok) {
