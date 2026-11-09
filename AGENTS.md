@@ -1,6 +1,6 @@
-# Cafe Launcher API
+# Cafe Launcher Backend
 
-Cloudflare Worker（Hono + chanfana，运行在 workerd 上）为 Cafe Launcher 桌面端提供 GitHub Releases 代理，并把 Blue Archive 公告索引转换为启动器兼容的公告与 Banner 响应。
+Cloudflare Worker（Hono + chanfana，运行在 workerd 上，部署名 `cafe-launcher-backend`）为 Cafe Launcher 桌面端提供 GitHub Releases 代理，并把 Blue Archive 公告索引转换为启动器兼容的公告与 Banner 响应。
 
 ## 结构与契约
 
@@ -22,7 +22,7 @@ Cloudflare Worker（Hono + chanfana，运行在 workerd 上）为 Cafe Launcher 
 
 ## 部署
 
-`.github/workflows/deploy.yml` 在 Pull Request 和推送到 `main` 时执行类型检查与测试，随后在推送到 `main` 或 `workflow_dispatch` 时部署。需要仓库 Secret：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。生产域名 `api.cafe-launcher.saibamidori.com` 及兼容旧域名 `api-cafe-launcher.saibamidori.com` 由 `wrangler.jsonc` 的 custom domain 路由绑定。
+`.github/workflows/deploy.yml` 在 Pull Request 和推送到 `main` 时执行类型检查与测试，随后在推送到 `main` 或 `workflow_dispatch` 时部署。需要仓库 Secret：`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`。生产域名 `api.cafe-launcher.saibamidori.com` 及兼容旧域名 `api-cafe-launcher.saibamidori.com` 由 `wrangler.jsonc` 的 custom domain 路由绑定。该工作流当前在仓库侧为 `disabled_manually`：推送 `main` 不会触发测试或部署，需要自动部署时先在 Actions 恢复工作流，或在本地运行 `npm run deploy`。
 
 # Cloudflare Workers
 

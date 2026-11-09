@@ -1,6 +1,6 @@
-# Cafe Launcher API
+# Cafe Launcher Backend
 
-Cafe Launcher 的 Cloudflare Worker API。目前提供 GitHub Releases 代理，供桌面启动器检查自身更新。
+Cafe Launcher 的 Cloudflare Worker 后端，部署名 `cafe-launcher-backend`。目前提供 GitHub Releases 代理与 Blue Archive 公告索引转换，供桌面启动器检查更新、读取更新说明和显示公告。
 
 ## 接口
 
@@ -14,7 +14,7 @@ Cafe Launcher 的 Cloudflare Worker API。目前提供 GitHub Releases 代理，
 
 发布列表、版本更新说明和公告资源在 Cloudflare Cache API 中缓存 5 分钟。查询字符串不会产生独立缓存项。
 
-生产域名：`api.cafe-launcher.saibamidori.com`（旧域名 `api-cafe-launcher.saibamidori.com` 保留兼容）
+生产域名：`api.cafe-launcher.saibamidori.com`（旧域名 `api-cafe-launcher.saibamidori.com` 保留兼容）。两个域名都由 `wrangler.jsonc` 的 custom domain 路由绑定。
 
 ## 本地开发
 
@@ -31,7 +31,9 @@ npm run dev
 
 ## 部署
 
-推送或提交针对 `main` 的 Pull Request 时，GitHub Actions 会运行类型检查和 Workers 集成测试。推送到 `main`（或手动触发 `workflow_dispatch`）且验证通过后，工作流执行 `npm run deploy`。
+推送或提交针对 `main` 的 Pull Request 时，`.github/workflows/deploy.yml` 会运行类型检查和 Workers 集成测试；推送到 `main`（或手动触发 `workflow_dispatch`）且验证通过后，工作流执行 `npm run deploy`。
+
+该工作流当前在 GitHub 仓库侧被手动禁用（`disabled_manually`），推送不会触发测试或部署。需要自动部署时先在 Actions 中恢复工作流，否则在本地运行 `npm run deploy`。
 
 部署工作流需要配置以下 GitHub Actions 仓库 Secret：
 
