@@ -74,6 +74,7 @@ describe("GET /api/v2/launcher/releases/:version/notes", () => {
     );
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
   it("does not expose draft releases through the public endpoint", async () => {
@@ -104,6 +105,7 @@ describe("GET /api/v2/launcher/releases/:version/notes", () => {
     );
 
     expect(response.status).toBe(502);
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
   it("rejects a malformed version without touching GitHub", async () => {
@@ -111,6 +113,17 @@ describe("GET /api/v2/launcher/releases/:version/notes", () => {
 
     const response = await requestNotes(
       "https://notes-validation-test.invalid/api/v2/launcher/releases/not-a-version/notes",
+    );
+
+    expect(response.status).toBe(400);
+    expect(upstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects prerelease identifiers with leading zeros without touching GitHub", async () => {
+    const upstreamFetch = vi.spyOn(globalThis, "fetch");
+
+    const response = await requestNotes(
+      "https://notes-leading-zero-test.invalid/api/v2/launcher/releases/1.2.0-beta.01/notes",
     );
 
     expect(response.status).toBe(400);

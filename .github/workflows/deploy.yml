@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: api-cafe-launcher-${{ github.ref }}
+  group: cafe-launcher-backend-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

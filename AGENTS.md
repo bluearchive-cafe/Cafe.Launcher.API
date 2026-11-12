@@ -5,8 +5,8 @@ Cloudflare Worker（Hono + chanfana，运行在 workerd 上，部署名 `cafe-la
 ## 结构与契约
 
 - `src/index.ts` 是唯一的路由注册处；新增或调整路由时同步更新 `README.md` 的接口表。
-- 路由：`/api/launcher/releases`（旧版，读取 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）、`/api/v2/launcher/releases`（当前启动器使用，读取 `bluearchive-cafe/Cafe.Launcher.Avalonia`，过滤草稿与未上传完成的资产）、`/api/v2/launcher/releases/:version/notes`（按裸版本号取更新说明，草稿视为不存在）、`/api/launcher/operations/resource`；`/` 提供 OpenAPI 文档。
-- 响应通过 Cloudflare Cache API 缓存 5 分钟，缓存键剔除查询字符串（`src/endpoints/launcherReleases.ts` 中的 `CACHE_MAX_AGE`）。发布列表按分页拉取 GitHub（每页 100 条）。
+- 路由：`/api/launcher/releases`（旧版，读取 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）、`/api/v2/launcher/releases`（当前启动器使用，读取 `bluearchive-cafe/Cafe.Launcher.Avalonia`，过滤草稿与未上传完成的资产）、`/api/v2/launcher/releases/latest`（官网等公开下载页使用，按 `channel=stable|beta` 返回最新版本，按 SemVer 比较而非 feed 顺序）、`/api/v2/launcher/releases/:version/notes`（按裸版本号取更新说明，草稿视为不存在）、`/api/launcher/operations/resource`；`/` 提供 OpenAPI 文档。
+- 响应通过 Cloudflare Cache API 缓存 5 分钟，缓存键剔除查询字符串（`src/endpoints/launcherReleases.ts` 中的 `CACHE_MAX_AGE`）；`releases/latest` 的缓存键保留 `channel`，其他查询字符串忽略。发布列表按分页拉取 GitHub（每页 100 条）。
 - `GITHUB_TOKEN` 是 Worker secret，生产环境用 `wrangler secret put GITHUB_TOKEN` 配置，本地放在 `.dev.vars`；任何情况下都不要提交真实值。
 
 ## 命令

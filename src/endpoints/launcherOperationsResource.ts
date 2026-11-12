@@ -124,7 +124,6 @@ export class LauncherOperationsResource extends OpenAPIRoute {
         "Cache-Control",
         `public, max-age=${CACHE_MAX_AGE}`,
       );
-      response.headers.set("Access-Control-Allow-Origin", "*");
 
       c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
       return response;
